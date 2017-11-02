@@ -32,8 +32,8 @@ r_tot = 0.0
 o = reset!(env)
 while !done && step <= nsteps
     action = sample_action(env)
-    obs, rew, isdone, info = step!(env, action)
-    println(obs, " ", rew, " ", isdone, " ", info)
+    obs, rew, done, info = step!(env, action)
+    println(obs, " ", rew, " ", done, " ", info)
     r_tot += rew
     step += 1
 end

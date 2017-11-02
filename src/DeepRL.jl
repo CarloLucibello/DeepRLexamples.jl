@@ -9,7 +9,7 @@ export AbstractEnvironment
 export reset!, step!, actions, state #,done
 
 # optional overloads
-export sample_action, n_actions, render
+export sample_action, n_actions, render, finished
 
 # POMDPs integration
 export POMDPEnvironment, MDPEnvironment, obs_dimensions
@@ -25,7 +25,7 @@ reset!(env::AbstractEnvironment) = error("not implemented for this environment!"
 
 
 """
-    step!(env, a) --> obs, rew, isdone, info
+    step!(env, a) --> obs, rew, done, info
 
 Take an environment, and an action to execute, and
 step the environment forward. Return an observation, reward,
@@ -45,11 +45,11 @@ actions(env::AbstractEnvironment) = error("not implemented for this environment!
 ############### OPTIONAL OVERLOADS #########################################
 
 """
-    done(env)
+    finished(env)
 
 Return true if the current state is terminal.
 """
-Base.done(env::AbstractEnvironment) = error("not implemented for this environment!")
+finished(env::AbstractEnvironment) = error("not implemented for this environment!")
 
 """
     state(env)
