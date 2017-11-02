@@ -1,4 +1,4 @@
-__precompile__()
+#__precompile__()
 module DeepRL
 
 using POMDPs
@@ -6,7 +6,7 @@ using POMDPs
 export AbstractEnvironment
 
 # mandatory interface
-export reset!, step!, actions, state #,done
+export reset!, step!, actions, state
 
 # optional overloads
 export sample_action, n_actions, render, finished
