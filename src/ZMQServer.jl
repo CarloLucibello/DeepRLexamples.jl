@@ -1,3 +1,8 @@
+# for the ZMQ part
+using ZMQ
+using JSON
+import Logging
+
 struct ZMQTransport
     ctx::Context
     sock::Socket

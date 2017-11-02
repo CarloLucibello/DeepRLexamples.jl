@@ -1,146 +1,80 @@
-#__precompile__()
-
-
+__precompile__()
 module DeepRL
 
 using POMDPs
 
-# for the ZMQ part
-using ZMQ
-using DeepRL
-using JSON
+export AbstractEnvironment
 
-import Logging
+# mandatory interface
+export reset!, step!, actions, state #,done
 
+# optional overloads
+export sample_action, n_actions, render
 
-export
-    # Environment types
-    AbstractEnvironment,
-    POMDPEnvironment,
-    MDPEnvironment,
-    # supporting methods
-    reset,
-    step!,
-    actions,
-    sample_action,
-    n_actions,
-    obs_dimensions,
-    render
-
+# POMDPs integration
+export POMDPEnvironment, MDPEnvironment, obs_dimensions
 
 abstract type AbstractEnvironment end
 
-mutable struct MDPEnvironment{S} <: AbstractEnvironment
-    problem::MDP
-    state::S
-    rng::AbstractRNG
-end
-function MDPEnvironment(problem::MDP; rng::AbstractRNG=MersenneTwister(0))
-    return MDPEnvironment(problem, initial_state(problem, rng), rng)
-end
+"""
+    reset!(env)
 
-mutable struct POMDPEnvironment{S} <: AbstractEnvironment
-    problem::POMDP
-    state::S
-    rng::AbstractRNG
-end
-function POMDPEnvironment(problem::POMDP; rng::AbstractRNG=MersenneTwister(0))
-    return POMDPEnvironment(problem, initial_state(problem, rng), rng)
-end
-
+Reset an environment and returns an initial state (or observation).
 """
-    reset(env::MDPEnvironment)
-Reset an MDP environment by sampling an initial state returning it.
-"""
-function Base.reset(env::MDPEnvironment)
-    s = initial_state(env.problem, env.rng)
-    env.state = s
-    return convert_s(Array{Float64, 1}, s, env.problem)
-end
-
-"""
-    reset(env::POMDPEnvironment)
-Reset an POMDP environment by sampling an initial state,
-generating an observation and returning it.
-"""
-function Base.reset(env::POMDPEnvironment)
-    s = initial_state(env.problem, env.rng)
-    env.state = s
-    o = generate_o(env.problem, s, env.rng)
-    return convert_o(Array{Float64, 1}, o, env.problem)
-end
+reset!(env::AbstractEnvironment) = error("not implemented for this environment!")
 
 
 """
-    step!{A}(env::POMDPEnvironment, a::A)
-Take in an POMDP environment, and an action to execute, and
-step the environment forward. Return the state, reward,
-terminal flag and info
+    step!(env, a) --> obs, rew, isdone, info
+
+Take an environment, and an action to execute, and
+step the environment forward. Return an observation, reward,
+terminal flag and info.
+
+Depending on the environment, the observation could be the whole current state.
 """
-function step!(env::MDPEnvironment, a::A) where A
-    s, r = generate_sr(env.problem, env.state, a, env.rng)
-    env.state = s
-    t = isterminal(env.problem, s)
-    info = nothing
-    obs = convert_s(Array{Float64, 1}, s, env.problem)
-    return obs, r, t, info
-end
+step!(env::AbstractEnvironment, a) = error("not implemented for this environment!")
 
 """
-    step!{A}(env::MDPEnvironment, a::A)
-Take in an MDP environment, and an action to execute, and
-step the environment forward. Return the observation, reward,
-terminal flag and info
+    actions(env)
+
+Return an action space object that can be sampled with rand.
 """
-function step!(env::POMDPEnvironment, a::A) where A
-    s, o, r = generate_sor(env.problem, env.state, a, env.rng)
-    env.state = s
-    t = isterminal(env.problem, s)
-    info = nothing
-    obs = convert_o(Array{Float64, 1}, o, env.problem)
-    return obs, r, t, info
-end
+actions(env::AbstractEnvironment) = error("not implemented for this environment!")
+
+############### OPTIONAL OVERLOADS #########################################
 
 """
-    actions(env::Union{POMDPEnvironment, MDPEnvironment})
-Return an action object that can be sampled with rand.
+    done(env)
+
+Return true if the current state is terminal.
 """
-function POMDPs.actions(env::Union{POMDPEnvironment, MDPEnvironment})
-    return actions(env.problem)
-end
+Base.done(env::AbstractEnvironment) = error("not implemented for this environment!")
 
 """
-    sample_action(env::Union{POMDPEnvironment, MDPEnvironment})
+    state(env)
+
+Return the current state of the environment.
+"""
+state(env::AbstractEnvironment) = env.state
+
+"""
+    sample_action(env)
+
 Sample an action from the action space of the environment.
 """
-function sample_action(env::Union{POMDPEnvironment, MDPEnvironment})
-    return rand(env.rng, actions(env))
-end
+sample_action(env::AbstractEnvironment) = rand(actions(env))
 
 """
-    n_actions(env::Union{POMDPEnvironment, MDPEnvironment})
-Return the number of actions in the environment (environments with discrete action spaces only)
+    render(env)
+
+Renders a graphic of the environment.
 """
-function POMDPs.n_actions(env::Union{POMDPEnvironment, MDPEnvironment})
-    return n_actions(env.problem)
-end
+render(env::AbstractEnvironment) = error("not implemented for this environment!")
+########################################################
 
+include("pomdps_integration.jl")
+# include("ZMQServer.jl")
 
-function obs_dimensions(env::MDPEnvironment)
-    return size(convert_s(Array{Float64,1}, initial_state(env.problem, env.rng), env.problem))
-end
-
-
-function obs_dimensions(env::POMDPEnvironment)
-    return size(convert_o(Array{Float64,1}, generate_o(env.problem, initial_state(env.problem, env.rng), env.rng), env.problem))
-end
-
-"""
-    render(env::AbstractEnvironment)
-Renders a graphic of the environment
-"""
-function render(env::AbstractEnvironment) end
-
-include("ZMQServer.jl")
 
 end # module
