@@ -9,7 +9,7 @@ export AbstractEnvironment
 export reset!, step!, actions, state
 
 # optional overloads
-export sample_action, n_actions, render, finished
+export sample_action, n_actions, render, finished#, srand
 
 # POMDPs integration
 export POMDPEnvironment, MDPEnvironment, obs_dimensions
@@ -71,7 +71,14 @@ sample_action(env::AbstractEnvironment) = rand(actions(env))
 Renders a graphic of the environment.
 """
 render(env::AbstractEnvironment) = error("not implemented for this environment!")
-########################################################
+
+"""
+srand(env, seed)
+
+Seeds the enviroment.
+"""
+srand(env::AbstractEnvironment, seed) = error("not implemented for this environment!")
+###########################################################
 
 include("pomdps_integration.jl")
 # include("ZMQServer.jl")

@@ -13,7 +13,7 @@ function main(args)
     @add_arg_table s begin
         ("--hidden"; default=[100]; nargs='*'; arg_type=Int64)
         ("--atype"; default=(gpu()>=0 ? "KnetArray{Float32}":"Array{Float64}"))
-        ("--optim"; default="Adam(;lr=1e-2)")
+        ("--optim"; default="Adam(lr=1e-2)")
         ("--discount"; default=0.99; arg_type=Float64)
         ("--episodes"; default=500; arg_type=Int64)
         ("--rendered"; default=true; arg_type=Bool)
@@ -27,19 +27,19 @@ function main(args)
     
     env = GymEnv("CartPole-v1")
     o[:seed] > 0 && (srand(o[:seed]); srand(env, o[:seed]))
-    xsize, ysize = 4, 2 
-    w = initweights(o[:atype], o[:hidden], xsize, ysize)
+    nS, nA = 4, 2 
+    w = initweights(o[:atype], o[:hidden], nS, nA)
     opts = map(wi->eval(parse(o[:optim])), w)
 
     avgreward = 0
     for k = 1:o[:episodes]
         state = reset!(env)
         episode_rewards = 0
-        history = History()
+        history = History(nS, nA,o[:discount])
         for t=1:1000
             s = convert(o[:atype], state)
-            pred = predict(w,s)
-            probs = softmax(pred)
+            p, V = predict(w, s)
+            probs = softmax(p)
             action = sample_action(probs)
 
             next_state, reward, done, _ = step!(env, actions(env)[action])
@@ -58,37 +58,54 @@ function main(args)
         k % o[:period] == 0 && println("(episode:$k, avgreward:$avgreward)")
         k % o[:period] == 0 && o[:rendered] && render(env, close=true)
 
-        states = reshape(history.states, xsize, length(history.states)÷xsize)
-        values = get_values(history.rewards, o[:discount])
-        train!(w, states, history.actions, values, opts)
+        train!(w, history, opts)
     end
 end
 
  mutable struct History
+    nS::Int
+    nA::Int
+    γ::F
     states::Vector{F}
     actions::Vector{Int}
     rewards::Vector{F}
 end
-History() = History(zeros(F,0),zeros(Int, 0),zeros(F,0))
+History(nS, nA, γ) = History(nS, nA, γ, zeros(F,0),zeros(Int, 0),zeros(F,0))
+
+function discount(rewards, γ)
+    R = similar(rewards)
+    R[end] = rewards[end]
+    for k = length(rewards)-1:-1:1
+        R[k] = γ * R[k+1] + rewards[k]
+    end
+    return (R .- mean(R)) ./ (std(R) + F(1e-8))
+end
 
 function initweights(atype, hidden, xsize=4, ysize=2)
     w = []
     x = xsize
-    for y in [hidden..., ysize]
+    for y in [hidden...]
         push!(w, xavier(y, x))
         push!(w, zeros(y, 1))
         x = y
     end
+    push!(w, xavier(ysize, x)) # Prob actions
+    push!(w, zeros(ysize, 1))
+    push!(w, xavier(1, x)) # Value function
+    push!(w, zeros(1, 1))
+    
     return map(wi->convert(atype,wi), w)
 end
 
-function predict(w,x)
-    # @show size(w) size(x)
-    for i = 1:2:length(w)-2
+function predict(w, x)
+    for i = 1:2:length(w)-4
         x = relu.(w[i] * x .+ w[i+1])
     end
-    return w[end-1] * x .+ w[end]
+    prob_act = w[end-3] * x .+ w[end-2]
+    value = w[end-1] * x .+ w[end]
+    return prob_act, value
 end
+
 
 function softmax(x)
     y = maximum(x, 1)
@@ -105,28 +122,20 @@ function sample_action(probs)
     return actions[1]
 end
 
-function get_values(rewards, γ)
-    values = similar(rewards)
-    values[end] = rewards[end]
-    for k = length(rewards)-1:-1:1
-        values[k] = γ * values[k+1] + rewards[k]
-    end
-
-    return (values .- mean(values)) ./ (std(values) + F(1e-8))
+function loss(w, history)
+    nS, nA = history.nS, history.nA
+    M = length(history.states)÷nS
+    states = reshape(history.states, nS, M)
+    R = discount(history.rewards, history.γ)
+    
+    p, V = predict(w, states)
+    inds = history.actions + nA*(0:M-1)
+    lp = logp(p, 1)[inds]
+    return -sum(lp .* (R .- getval(V))) / M + sum((R .- V).*(R .- V)) / M
 end
 
-function loss(w, x, actions, values)
-    # @show size(x)
-    ypred = predict(w,x)
-    nrows, ncols = size(ypred)
-    index = actions + nrows*(0:(length(actions)-1))
-    # @show size(ypred) actions values index
-    lp = logp(ypred, 1)[index]
-    return -sum(lp .* values) / size(x, 2)
-end
-
-function train!(w, s, a, v, opt)
-    dw = grad(loss)(w, s, a, v)
+function train!(w, history, opt)
+    dw = grad(loss)(w, history)
     update!(w, dw, opt)
 end
 
