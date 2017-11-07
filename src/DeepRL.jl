@@ -80,7 +80,7 @@ Seeds the enviroment.
 srand(env::AbstractEnvironment, seed) = error("not implemented for this environment!")
 ###########################################################
 
-include("pomdps_integration.jl")
+# include("pomdps_integration.jl")
 # include("ZMQServer.jl")
 
 
