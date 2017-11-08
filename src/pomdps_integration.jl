@@ -1,4 +1,9 @@
 
+using POMDPs
+# POMDPs integration
+export POMDPEnvironment, MDPEnvironment
+
+
 mutable struct MDPEnvironment{S} <: AbstractEnvironment
     problem::MDP
     state::S

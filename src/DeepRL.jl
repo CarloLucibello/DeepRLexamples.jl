@@ -1,18 +1,13 @@
 #__precompile__()
 module DeepRL
 
-using POMDPs
-
 export AbstractEnvironment
 
 # mandatory interface
 export reset!, step!, actions, state
 
 # optional overloads
-export sample_action, n_actions, render, finished#, srand
-
-# POMDPs integration
-export POMDPEnvironment, MDPEnvironment, obs_dimensions
+export sample_action, n_actions, render, finished, obs_dimensions#, srand
 
 abstract type AbstractEnvironment end
 
@@ -73,11 +68,28 @@ Renders a graphic of the environment.
 render(env::AbstractEnvironment) = error("not implemented for this environment!")
 
 """
-srand(env, seed)
+    srand(env, seed)
 
 Seeds the enviroment.
 """
 srand(env::AbstractEnvironment, seed) = error("not implemented for this environment!")
+
+
+"""
+    n_actions(env)
+
+Number of available actions. 
+"""
+n_actions(env::AbstractEnvironment) = length(actions(env))
+
+
+"""
+    obs_dimensions(env)
+
+Observasion space dimension 
+"""
+obs_dimensions(env::AbstractEnvironment) = error("not implemented for this environment!")
+
 ###########################################################
 
 # include("pomdps_integration.jl")
