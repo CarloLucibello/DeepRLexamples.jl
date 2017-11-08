@@ -5,15 +5,32 @@ import AutoGrad: getval
 
 const F = Float64
 
- mutable struct History
-    nS::Int
+mutable struct History
+    xsize
     nA::Int
     γ::F
-    states::Vector{F}
+    states::Array{F}
     actions::Vector{Int}
     rewards::Vector{F}
+    Rlast
 end
-History(nS, nA, γ) = History(nS, nA, γ, zeros(F,0),zeros(Int, 0),zeros(F,0))
+History(xsize, nA, γ) = History(xsize, nA, γ, zeros(F,0), zeros(Int, 0), zeros(F,0), 0)
+
+function Base.push!(history, s, a, r)
+    history.states = append!(history.states, s)
+    push!(history.actions, a)
+    push!(history.rewards, r)
+end
+
+function preprocess(I)
+    I = I[36:195,:,:]
+    I = I[1:2:end, 1:2:end, 1]
+    I[I .== 144] .= 0
+    I[I .== 109] .= 0
+    I[I .!= 0] .= 1
+    return vec(I)
+end
+
 
 function discount(rewards, γ)
     R = similar(rewards)
@@ -25,28 +42,36 @@ function discount(rewards, γ)
     return (R .- mean(R)) ./ (std(R) + F(1e-10)) #speeds up training a lot
 end
 
-function initweights(atype, hidden, xsize=4, ysize=2)
+function initweights(atype, xsize, ysize)
+    @assert xsize == (80, 80, 1)
     w = []
-    x = xsize
-    for y in [hidden...]
-        push!(w, xavier(y, x))
-        push!(w, zeros(y, 1))
-        x = y
-    end
-    push!(w, xavier(ysize, x)) # Prob actions
+    ch1 = 4
+    ch2 = 8
+    nh = 64
+    push!(w, xavier(8, 8, xsize[3], ch1))
+    push!(w, zeros(1, 1, ch1, 1))
+    push!(w, xavier(4, 4, ch1, ch2))
+    push!(w, zeros(1, 1, ch2, 1))
+    
+    push!(w, xavier(nh, 9*9*ch2))
+    push!(w, zeros(nh, 1))
+
+    push!(w, xavier(ysize, nh))
     push!(w, zeros(ysize, 1))
-    push!(w, xavier(1, x)) # Value function
+    push!(w, xavier(1, nh))
     push!(w, zeros(1, 1))
     
     return map(wi->convert(atype,wi), w)
 end
 
 function predict(w, x)
-    for i = 1:2:length(w)-4
-        x = relu.(w[i] * x .+ w[i+1])
-    end
-    prob_act = w[end-3] * x .+ w[end-2]
-    value = w[end-1] * x .+ w[end]
+    x = reshape(x, 80, 80, 1, :)
+    x = relu.(conv4(w[1], x, stride=4, padding=2) .+ w[2])
+    x = relu.(conv4(w[3], x, stride=2) .+ w[4])
+    x = mat(x)
+    x = relu.(w[5]*x .+ w[6])
+    prob_act = w[7] * x .+ w[8]
+    value = w[9] * x .+ w[10]
     return prob_act, value
 end
 
@@ -66,7 +91,8 @@ function sample_action(probs)
 end
 
 function loss(w, history)
-    nS, nA = history.nS, history.nA
+    xsize, nA = history.xsize, history.nA
+    nS = 80*80
     M = length(history.states)÷nS
     states = reshape(history.states, nS, M)
     R = discount(history.rewards, history.γ)
@@ -85,7 +111,6 @@ function train!(w, history, opt)
 end
 
 function main(;
-    hidden = [100],
     optim = Adam(lr=1e-2),
     γ = 0.99, #discount rate
     episodes = 500,
@@ -96,37 +121,37 @@ function main(;
 
     atype = gpu() >= 0 ? KnetArray{F} : Array{F}
 
-    env = GymEnv("CartPole-v1")
+    env = GymEnv("Pong-v0")
     seed > 0 && (srand(seed); srand(env, seed))
-    nS, nA = 4, 2 
-    w = initweights(atype, hidden, nS, nA)
-    opts = map(wi->deepcopy(optim), w)
+    xsize = (80, 80, 1)
+    nA = 3 
+    amap = Dict(1=>2, 2=>3, 3=>0) #up, down, no action
 
-    avgreward = 0
+    w = initweights(atype, xsize, nA)
+    opts = map(wi->deepcopy(optim), w)
+    avgreward = -21.0
     for k=1:episodes
         state = reset!(env)
-        episode_rewards = 0
-        history = History(nS, nA, γ)
-        for t=1:1000
-            s = convert(atype, state)
+        episode_reward = 0
+        history = History(xsize, nA, γ)
+        prev_s = zeros(80*80)
+        while true
+            s = preprocess(state) .- prev_s
             p, V = predict(w, s)
-            probs = softmax(p)
-            action = sample_action(probs)
+            p = softmax(p)
+            action = sample_action(p)
 
-            next_state, reward, done, _ = step!(env, actions(env)[action])
-            append!(history.states, state)
-            push!(history.actions, action)
-            push!(history.rewards, reward)
+            next_state, reward, done, _ = step!(env, amap[action])
+            push!(history, s, action, reward)
             state = next_state
-            episode_rewards += reward
-
+            episode_reward += reward
+            # @show done reward episode_reward
             k % infotime == 0 && rendered && render(env)
             done && break
         end
-
-        avgreward = 0.01 * episode_rewards + avgreward * 0.99
-
-        k % infotime == 0 && println("(episode:$k, avgreward:$avgreward)")
+      
+        avgreward = 0.1*episode_reward + 0.9*avgreward
+        println("(episode:$k, Reward:$episode_reward, AvgReward:$(trunc(avgreward,3))")
         k % infotime == 0 && rendered && render(env, close=true)
 
         train!(w, history, opts)

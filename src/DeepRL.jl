@@ -11,6 +11,7 @@ export sample_action, n_actions, render, finished, obs_dimensions#, srand
 
 abstract type AbstractEnvironment end
 
+########## Mandatory Interface #######################
 """
     reset!(env)
 
