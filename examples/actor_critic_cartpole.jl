@@ -1,11 +1,10 @@
 using Knet
 using Gym
-using DeepRL
 import AutoGrad: getval
 
 const F = Float64
 
- mutable struct History
+mutable struct History
     nS::Int
     nA::Int
     γ::F

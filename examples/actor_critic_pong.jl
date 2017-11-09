@@ -1,6 +1,5 @@
 using Knet
 using Gym
-using DeepRL
 import AutoGrad: getval
 
 const F = Float64
@@ -14,6 +13,7 @@ mutable struct History
     rewards::Vector{F}
     Rlast
 end
+
 History(xsize, nA, γ) = History(xsize, nA, γ, zeros(F,0), zeros(Int, 0), zeros(F,0), 0)
 
 function Base.push!(history, s, a, r)

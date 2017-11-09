@@ -1,10 +1,8 @@
 using Knet
 using Gym
-using DeepRL
 using ArgParse
 
 const F = Float64
-
 
 mutable struct History
     states::Vector{F}
