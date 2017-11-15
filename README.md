@@ -1,5 +1,5 @@
 # DeepRLexamples
-This repo provides examples of deep reinforcement learning in julia using [Knet](https://github.com/denizyuret/Knet.jl) deep learning library and [OpenAI Gym](https://gym.openai.com/). 
+This repo provides examples of deep reinforcement learning in julia using [Knet](https://github.com/denizyuret/Knet.jl) deep learning library and [OpenAI Gym](https://gym.openai.com/). Contributions are very welcome!
 
 ## Installation
 Install the [Gym](https://github.com/CarloLucibello/Gym.jl) environment
