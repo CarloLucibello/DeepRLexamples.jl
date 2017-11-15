@@ -9,7 +9,7 @@ Pkg.clone("https://github.com/CarloLucibello/Gym.jl")
 and run any of the examples or clone the whole repo with
 
 ```julia
-Pkg.clone("https://github.com/CarloLucibello/DeepRL.jl")
+Pkg.clone("https://github.com/CarloLucibello/DeepRLexamples.jl")
 ```
 
 ## Usage

@@ -2,7 +2,8 @@
 language: julia
 os:
   - linux
-  - osx
+  # - osx
+
 julia:
   - 0.6
   - nightly
@@ -16,4 +17,4 @@ notifications:
 # uncomment the following lines to override the default test script
 #script:
 #  - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-#  - julia -e 'Pkg.clone(pwd()); Pkg.build("DeepRL"); Pkg.test("DeepRL"; coverage=true)'
+#  - julia -e 'Pkg.clone(pwd()); Pkg.build("DeepRLexamples"); Pkg.test("DeepRLexamples"; coverage=true)'
