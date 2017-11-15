@@ -20,11 +20,11 @@ main(seed=1, episodes=1000, opt=Adam(lr=1e-2))
 ```
 
 ## Examples
-- reinforce_cartpole: reinforce algorithm with a multi layer perceptron.
+- [reinforce_cartpole](examples/reinforce_cartpole.jl): reinforce algorithm with a multi layer perceptron.
 
-- actor_critic_cartpole: actor critic algorithm with a multi layer perceptron.
+- [actor_critic_cartpole](examples/actor_critic_cartpole.jl): actor critic algorithm with a multi layer perceptron.
 
-- actor_critic_pong: actor critic algorithm with a convolutional neural network. 
+- [actor_critic_pong](examples/actor_critic_pong.jl): actor critic algorithm with a convolutional neural network. 
 
 
 ## Interface
