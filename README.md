@@ -20,11 +20,13 @@ main(seed=1, episodes=1000, opt=Adam(lr=1e-2))
 ```
 
 ## Examples
-- [reinforce_cartpole](examples/reinforce_cartpole.jl): reinforce algorithm with a multi layer perceptron.
+- [reinforce_cartpole.jl](examples/reinforce_cartpole.jl): reinforce algorithm with a multi layer perceptron.
 
-- [actor_critic_cartpole](examples/actor_critic_cartpole.jl): actor critic algorithm with a multi layer perceptron.
+- [actor_critic_cartpole.jl](examples/actor_critic_cartpole.jl): actor critic algorithm with a multi layer perceptron.
 
-- [actor_critic_pong](examples/actor_critic_pong.jl): actor critic algorithm with a convolutional neural network. 
+- [actor_critic_pong.jl](examples/actor_critic_pong.jl): actor critic algorithm with a convolutional neural network. 
+                                                    Following [Karphaty's blog entry](http://karpathy.github.io/2016/05/31/rl/), but using actor-critic instead of simple police gradient and cnn instead of mlp.
+
 
 
 ## Interface
