@@ -1,22 +1,37 @@
-# DeepRL
-This repo provides examples of deep reinforcement learning in julia using [Knet](https://github.com/denizyuret/Knet.jl) deep learning lybrary and [OpenAI Gym](https://gym.openai.com/). 
+# DeepRLexamples
+This repo provides examples of deep reinforcement learning in julia using [Knet](https://github.com/denizyuret/Knet.jl) deep learning library and [OpenAI Gym](https://gym.openai.com/). 
 
-# Installation
-Install the Gym enviroment
+## Installation
+Install the [Gym](https://github.com/CarloLucibello/Gym.jl) environment
 ```julia
 Pkg.clone("https://github.com/CarloLucibello/Gym.jl")
 ```
 and run any of the examples or clone the whole repo with
 
-```
+```julia
 Pkg.clone("https://github.com/CarloLucibello/DeepRL.jl")
 ```
+
+## Usage
+```julia
+include("actor_critic_pong.jl"); using Knet
+
+main(seed=1, episodes=1000, opt=Adam(lr=1e-2))
+```
+
+## Examples
+- reinforce_cartpole: reinforce algorithm with a multi layer perceptron.
+
+- actor_critic_cartpole: actor critic algorithm with a multi layer perceptron.
+
+- actor_critic_pong: actor critic algorithm with a convolutional neural network. 
+
 
 ## Interface
 This repo is just a collection of examples and
 can be adapted to any use. Nonetheless,
 to add new examples to the repo, and as a general
-good practice, we reccoment any user defined new enviroment 
+good practice, we reccomend any user-defined new enviroment 
 to provide the following interface
 
 ```julia
@@ -29,10 +44,10 @@ step the environment forward. Return an observation, reward,
 terminal flag and info.  
 Depending on the environment, the observation could be the whole current state.
 """
-step!(env, a) --> obs, rew, done, info
+step!(env, a) --> obs, rew, isdone, info
 
 "Return an action space object that can be sampled with rand."
-actions(env) --> A
+action_space(env) --> A
 
 "Seeds the enviroment."
 srand(env, seed)
@@ -40,7 +55,7 @@ srand(env, seed)
 and  optionally also
 ```julia
 "Return true if the current state is terminal"
-finished(env) --> done
+done(env) --> isdone
 
 "The current state of the environment"
 env.state
@@ -49,25 +64,4 @@ env.state
 render(env)
 ```
 
-The enviroment supplied by `Gym` implements all the above methods and some others.
-
-```julia
-using Gym 
-
-env = GymEnv("CartPole-v0")
-
-nsteps = 1
-episodes = 10
-
-for episode=1:episodes
-    o = reset!(env)
-    r_tot = 0.0
-    for step=1:nsteps
-        action = rand(actions(env))
-        obs, rew, done, info = step!(env, action)
-        println(obs, " ", rew, " ", done, " ", info)
-        r_tot += rew
-        done && break
-    end
-end
-```
+The environment supplied by [Gym](https://github.com/CarloLucibello/Gym.jl) implements the above methods and some others.

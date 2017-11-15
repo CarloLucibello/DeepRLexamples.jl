@@ -71,7 +71,7 @@ function loss(w, history)
     R = discount(history.rewards, history.γ)
     
     p, V = predict(w, states)
-    V = V'
+    V = vec(V)
     inds = history.actions + nA*(0:M-1)
     lp = logp(p, 1)[inds] # lp is a vector
     
@@ -112,7 +112,7 @@ function main(;
             probs = softmax(p)
             action = sample_action(probs)
 
-            next_state, reward, done, _ = step!(env, actions(env)[action])
+            next_state, reward, done, _ = step!(env, action_space(env)[action])
             append!(history.states, state)
             push!(history.actions, action)
             push!(history.rewards, reward)
@@ -123,7 +123,7 @@ function main(;
             done && break
         end
 
-        avgreward = 0.01 * episode_rewards + avgreward * 0.99
+        avgreward = 0.02 * episode_rewards + avgreward * 0.98
 
         k % infotime == 0 && println("(episode:$k, avgreward:$avgreward)")
         k % infotime == 0 && rendered && render(env, close=true)
