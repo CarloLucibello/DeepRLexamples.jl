@@ -14,9 +14,9 @@ Pkg.clone("https://github.com/CarloLucibello/DeepRLexamples.jl")
 
 ## Usage
 ```julia
-include("actor_critic_pong.jl"); using Knet
+include("actor_critic_pong.jl")
 
-main(seed=1, episodes=1000, opt=Adam(lr=1e-2))
+main(seed=1, episodes=1000, lr=1e-2, rendered=true, infotime=50)
 ```
 
 ## Examples

@@ -43,7 +43,6 @@ function discount(rewards, γ)
         R[k] = γ * R[k+1] + rewards[k]
     end
     # return R
-    # return R ./ 21
     return (R .- mean(R)) ./ (std(R) + F(1e-10)) #speeds up training a lot
 end
 
@@ -117,8 +116,8 @@ end
 L2Reg(x) = mean(x .* x)
 
 function main(;
-        optim = Adam(lr=1e-2),
-        γ = 0.99, #discount rate
+        lr = 1e-2, # learning rate
+        γ = 0.99, # discount rate
         episodes = 10000,  # max episodes played
         rendered = false, # if true display an episode every infotime ones
         seed = -1,
@@ -134,7 +133,7 @@ function main(;
     amap = Dict(1=>2, 2=>3, 3=>0) #up, down, no action
 
     w = initweights(atype, xsize, nA)
-    opt = map(wi->deepcopy(optim), w)
+    opt = [Adam(lr=lr) for _=1:length(w)]
     avgreward = -21.0
     for episode=1:episodes
         state = reset!(env)
@@ -150,10 +149,9 @@ function main(;
             p = softmax(p)
             action = sample_action(p)
             
-            next_state, reward, done, _ = step!(env, amap[action])           
+            state, reward, done, _ = step!(env, amap[action])           
             
             push!(history, s, action, reward)
-            state = next_state
             episode_reward += reward
             episode % infotime == 0 && rendered && render(env)
             done && break

@@ -2,17 +2,15 @@ using Knet
 using Gym
 import AutoGrad: getval
 
-const F = Float64
-
 mutable struct History
     nS::Int
     nA::Int
-    γ::F
-    states::Vector{F}
+    γ::Float64
+    states::Vector{Float64}
     actions::Vector{Int}
-    rewards::Vector{F}
+    rewards::Vector{Float64}
 end
-History(nS, nA, γ) = History(nS, nA, γ, zeros(F,0),zeros(Int, 0),zeros(F,0))
+History(nS, nA, γ) = History(nS, nA, γ, zeros(0),zeros(Int, 0),zeros(0))
 
 function discount(rewards, γ)
     R = similar(rewards)
@@ -21,10 +19,10 @@ function discount(rewards, γ)
         R[k] = γ * R[k+1] + rewards[k]
     end
     # return R
-    return (R .- mean(R)) ./ (std(R) + F(1e-10)) #speeds up training a lot
+    return (R .- mean(R)) ./ (std(R) + 1e-10) #speeds up training a lot
 end
 
-function initweights(atype, hidden, xsize=4, ysize=2)
+function initweights(hidden, xsize=4, ysize=2)
     w = []
     x = xsize
     for y in [hidden...]
@@ -37,7 +35,7 @@ function initweights(atype, hidden, xsize=4, ysize=2)
     push!(w, xavier(1, x)) # Value function
     push!(w, zeros(1, 1))
     
-    return map(wi->convert(atype,wi), w)
+    return w
 end
 
 function predict(w, x)
@@ -57,11 +55,10 @@ function softmax(x)
 end
 
 function sample_action(probs)
-    probs = Array(probs)
-    cprobs = cumsum(probs)
+    @assert size(probs, 2) == 1
+    cprobs = cumsum(probs, 1)
     sampled = cprobs .> rand() 
-    actions = mapslices(indmax, sampled, 1)
-    return actions[1]
+    return mapslices(indmax, sampled, 1)[1]
 end
 
 function loss(w, history)
@@ -72,45 +69,39 @@ function loss(w, history)
     
     p, V = predict(w, states)
     V = vec(V)
+    A = R .- V   # advantage  
     inds = history.actions + nA*(0:M-1)
     lp = logp(p, 1)[inds] # lp is a vector
-    
-    return -sum(lp .* (R .- getval(V))) / M + sum((R .- V).*(R .- V)) / M
+
+    return -mean(lp .* getval(A)) + L2Reg(A)
 end
 
-function train!(w, history, opt)
-    dw = grad(loss)(w, history)
-    update!(w, dw, opt)
-end
+L2Reg(x) = mean(x .* x)
 
 function main(;
-    hidden = [100],
-    optim = Adam(lr=1e-2),
+    hidden = [100], # width inner layers
+    lr = 1e-2,
     γ = 0.99, #discount rate
     episodes = 500,
     rendered = true,
     seed = -1,
     infotime = 50)
 
-
-    atype = gpu() >= 0 ? KnetArray{F} : Array{F}
-
     env = GymEnv("CartPole-v1")
     seed > 0 && (srand(seed); srand(env, seed))
     nS, nA = 4, 2 
-    w = initweights(atype, hidden, nS, nA)
-    opts = map(wi->deepcopy(optim), w)
-
+    w = initweights(hidden, nS, nA)
+    opt = [Adam(lr=lr) for _=1:length(w)]
+    
     avgreward = 0
-    for k=1:episodes
+    for episode=1:episodes
         state = reset!(env)
         episode_rewards = 0
         history = History(nS, nA, γ)
-        for t=1:1000
-            s = convert(atype, state)
-            p, V = predict(w, s)
-            probs = softmax(p)
-            action = sample_action(probs)
+        for t=1:10000
+            p, V = predict(w, state)
+            p = softmax(p)
+            action = sample_action(p)
 
             next_state, reward, done, _ = step!(env, action_space(env)[action])
             append!(history.states, state)
@@ -119,16 +110,19 @@ function main(;
             state = next_state
             episode_rewards += reward
 
-            k % infotime == 0 && rendered && render(env)
+            episode % infotime == 0 && rendered && render(env)
             done && break
         end
 
         avgreward = 0.02 * episode_rewards + avgreward * 0.98
-
-        k % infotime == 0 && println("(episode:$k, avgreward:$avgreward)")
-        k % infotime == 0 && rendered && render(env, close=true)
-
-        train!(w, history, opts)
+        if episode % infotime == 0
+            println("(episode:$episode, avgreward:$avgreward)")
+            rendered && render(env, close=true)
+        end
+        
+        dw = grad(loss)(w, history)
+        update!(w, dw, opt)
     end
+
     return w
 end
