@@ -1,6 +1,7 @@
 using Knet
-using Gym
-import AutoGrad: getval
+import Gym
+import Random
+using Statistics
 
 mutable struct History
     nS::Int
@@ -44,18 +45,11 @@ function predict(w, x)
     return probs
 end
 
-function softmax(x)
-    y = maximum(x, 1)
-    y = x .- y
-    y = exp.(y)
-    return y ./ sum(y, 1)
-end
-
 function sample_action(probs)
     @assert size(probs, 2) == 1
-    cprobs = cumsum(probs, 1)
+    cprobs = cumsum(probs, dims=1)
     sampled = cprobs .> rand() 
-    return mapslices(indmax, sampled, 1)[1]
+    return mapslices(argmax, sampled, dims=1)[1]
 end
 
 function loss(w, history)
@@ -66,7 +60,7 @@ function loss(w, history)
     
     p = predict(w, states)
     inds = history.actions + nA*(0:M-1)
-    lp = logp(p, 1)[inds] # lp is a vector
+    lp = logsoftmax(p, dims=1)[inds] # lp is a vector
 
     return -mean(lp .* R)
 end
@@ -76,41 +70,41 @@ function main(;
     lr = 1e-2, # learning rate
     γ = 0.99, #discount rate
     episodes = 500,
-    rendered = true,
+    render = true,
     seed = -1,
     infotime = 50)
 
-    env = GymEnv("CartPole-v1")
-    seed > 0 && (srand(seed); srand(env, seed))
+    env = Gym.GymEnv("CartPole-v1")
+    seed > 0 && (Random.seed!(seed); Gym.seed!(env, seed))
     nS, nA = 4, 2 
     w = initweights(hidden, nS, nA)
     opt = [Adam(lr=lr) for _=1:length(w)]
     
     avgreward = 0
     for episode=1:episodes
-        state = reset!(env)
+        state = Gym.reset!(env)
         episode_rewards = 0
         history = History(nS, nA, γ)
         for t=1:10000
             p = predict(w, state)
-            p = softmax(p)
+            p = softmax(p, dims=1)
             action = sample_action(p)
-
-            next_state, reward, done, _ = step!(env, action_space(env)[action])
+            
+            next_state, reward, done, info = Gym.step!(env, action-1)
             append!(history.states, state)
             push!(history.actions, action)
             push!(history.rewards, reward)
             state = next_state
             episode_rewards += reward
 
-            episode % infotime == 0 && rendered && render(env)
+            episode % infotime == 0 && render && Gym.render(env)
             done && break
         end
 
-        avgreward = 0.02 * episode_rewards + avgreward * 0.98
+        avgreward = 0.1 * episode_rewards + avgreward * 0.9
         if episode % infotime == 0
             println("(episode:$episode, avgreward:$avgreward)")
-            rendered && render(env, close=true)
+            Gym.close!(env)
         end
 
         dw = grad(loss)(w, history)
