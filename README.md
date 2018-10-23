@@ -14,7 +14,7 @@ and the julia packages [Gym.jl](https://github.com/ozanarkancan/Gym.jl) and [Kne
 You are now ready to run any of the examples in the repo. You can clone the whole repo with
 
 ```julia
-Pkg.clone("https://github.com/CarloLucibello/DeepRLexamples.jl")
+git clone https://github.com/CarloLucibello/DeepRLexamples.jl
 ```
 
 ## Usage
