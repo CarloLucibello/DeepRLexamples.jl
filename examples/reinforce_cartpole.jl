@@ -1,6 +1,5 @@
 using Knet
 import Gym
-using AutoGrad: getval
 import Random
 using Statistics
 
@@ -61,7 +60,7 @@ function loss(w, history)
     
     p = predict(w, states)
     inds = history.actions + nA*(0:M-1)
-    lp = logp(p, dims=1)[inds] # lp is a vector
+    lp = logsoftmax(p, dims=1)[inds] # lp is a vector
 
     return -mean(lp .* R)
 end
@@ -88,7 +87,7 @@ function main(;
         history = History(nS, nA, γ)
         for t=1:10000
             p = predict(w, state)
-            p = softmax(p)
+            p = softmax(p, dims=1)
             action = sample_action(p)
             
             next_state, reward, done, info = Gym.step!(env, action-1)
