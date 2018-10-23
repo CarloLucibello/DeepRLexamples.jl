@@ -4,7 +4,7 @@ This repo provides examples of deep reinforcement learning in julia (v1.0 and ab
 ## Installation
 Install the `gym` environment for python 
 ```bash
-pip install gym gym[atari]
+pip install --user gym[atari]
 ```
 and the julia packages [Gym.jl](https://github.com/ozanarkancan/Gym.jl) and [Knet](https://github.com/denizyuret/Knet.jl)
 ```julia
